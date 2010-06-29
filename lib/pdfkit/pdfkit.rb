@@ -1,4 +1,17 @@
 class PDFKit
+  @default_options = {
+    :disable_smart_shrinking => true,
+    :page_size => 'Letter',
+    :margin_top => '0.75in',
+    :margin_right => '0.75in',
+    :margin_bottom => '0.75in',
+    :margin_left => '0.75in',
+    :wkhtmltopdf => `which wkhtmltopdf-proxy`.chomp
+  }
+
+  class << self
+    attr_accessor :default_options
+  end
   
   class NoExecutableError < StandardError
     def initialize
@@ -19,22 +32,15 @@ class PDFKit
     @source = Source.new(url_file_or_html)
     
     @stylesheets = []
-    
-    default_options = {
-      :disable_smart_shrinking => true,
-      :page_size => 'Letter',
-      :margin_top => '0.75in',
-      :margin_right => '0.75in',
-      :margin_bottom => '0.75in',
-      :margin_left => '0.75in'
-    }
-    @options = normalize_options(default_options.merge(options))
-    
-    raise NoExecutableError.new if wkhtmltopdf.nil? || wkhtmltopdf == ''
+    default_options = self.class.default_options.merge(options)
+    @wkhtmltopdf = default_options.delete(:wkhtmltopdf)
+    @options = normalize_options(default_options)
+
+    raise NoExecutableError.new if @wkhtmltopdf.nil? || @wkhtmltopdf == ''
   end
   
   def command
-    args = [wkhtmltopdf]
+    args = [@wkhtmltopdf]
     args += @options.to_a.flatten.compact
     args << '--quiet'
     
@@ -64,11 +70,6 @@ class PDFKit
   end
   
   protected
-  
-    def wkhtmltopdf
-      @wkhtmltopdf ||= `which wkhtmltopdf-proxy`.chomp
-    end
-  
     def style_tag_for(stylesheet)
       "<style>#{File.read(stylesheet)}</style>"
     end

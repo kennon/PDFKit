@@ -1,6 +1,10 @@
 require 'spec_helper'
 
 describe PDFKit do
+  before(:each) do
+    # 'stub' this because in spec environment, because `which wkhtmltopdf` won't find the binary
+    PDFKit.default_options[:wkhtmltopdf] = File.join(SPEC_ROOT,'..','bin','wkhtmltopdf-proxy')
+  end
   
   context "initialization" do
     it "should accept HTML as the source" do
@@ -43,9 +47,15 @@ describe PDFKit do
   context "command" do
     it "should contstruct the correct command" do
       pdfkit = PDFKit.new('html', :page_size => 'Letter', :toc_l1_font_size => 12)
-      pdfkit.command.should include('wkhtmltopdf')
+      pdfkit.command.should include('wkhtmltopdf-proxy')
       pdfkit.command.should include('--page-size Letter')
       pdfkit.command.should include('--toc-l1-font-size 12')
+    end
+
+    it "should use PDFKit.default_options[:wkhtmltopdf] as executible if present" do
+      PDFKit.default_options[:wkhtmltopdf] = "my_executible"
+      pdfkit = PDFKit.new('html')
+      pdfkit.command.should include('my_executible')
     end
     
     it "will not include default options it is told to omit" do
